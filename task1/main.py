@@ -22,24 +22,30 @@ def matchLargeFileData(fileName1, fileName2):
     class FileChunk:
         def __init__(self, fileName, numRows):
             self.fileName = fileName
-            self.numRows = numRows
+            self.__numRows = numRows
             self.__currentRow = 1
+            self.__updateInfo()
 
         def __del__(self):
             os.remove(self.fileName)
     
         def currentRowInfo(self):
-            line = linecache.getline(self.fileName, self.__currentRow)
-            return processLine(line)
+            return self.__idx, self.__name
 
         def getCurrentRowIdx(self):
             return self.__currentRow;
 
         def getNumRows(self):
-            return self.numRows
+            return self.__numRows
         
         def advance(self):
             self.__currentRow += 1
+            if self.__currentRow <= self.__numRows:
+                self.__updateInfo()
+
+        def __updateInfo(self):
+            line = linecache.getline(self.fileName, self.__currentRow)
+            self.__idx, self.__name = processLine(line)
 
     # get data from a line
     def processLine(line):

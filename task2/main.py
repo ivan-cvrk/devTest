@@ -8,7 +8,7 @@ brackets = [
 def bracketsAreBalanced(file, brackets):
 
     # counter for bracketTypes
-    bracketCount = { x: 0 for x in brackets }
+    bracketStack = []
 
     # map each bracket to its key
     openingBrackets = {}
@@ -21,11 +21,11 @@ def bracketsAreBalanced(file, brackets):
     def evalBrackets(line): 
         for c in line:
             if c in openingBrackets.keys():
-                bracketCount[openingBrackets[c]] += 1
+                bracketStack.append(openingBrackets[c])
             elif c in closingBrackets.keys():
-                bracketCount[closingBrackets[c]] -= 1
-
-                if bracketCount[closingBrackets[c]] < 0:
+                if bracketStack[-1] == closingBrackets[c]:
+                    bracketStack.pop()
+                else:
                     raise Exception
             else:
                 continue
@@ -36,7 +36,7 @@ def bracketsAreBalanced(file, brackets):
         except:
             return False
 
-    return sum(bracketCount.values()) == 0
+    return len(bracketStack) == 0
 
 
 with open('file.txt') as file:
