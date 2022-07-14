@@ -1,5 +1,8 @@
 import os
 import linecache
+from pathlib import Path
+from tkinter import E
+import psutil
 
 # Comments on taken approach:
 #
@@ -12,9 +15,58 @@ import linecache
 
 
 # Match data from two large files in ascending order
-def matchLargeFileData(fileName1, fileName2):
+def matchFileData(fileName1, fileName2):
 
-    CHUNK_ROWS_COUNT = 50_000 # rows count per chunk
+    file1Size = Path(fileName1).stat().st_size
+    file2Size = Path(fileName2).stat().st_size
+
+    combinedSize = file1Size + file2Size
+
+    # check available memory
+    availableRam = psutil.virtual_memory().available
+
+    # get data from a line
+    def processLine(line):
+        line = line.split(' ')
+        return int(line[1]), line[0]
+
+    # Function that preforms all work in ram memory
+    def matchSmallFiles():
+        file1 = open(fileName1)
+        file2 = open(fileName2)
+
+        def mapFile(file):
+            map = {}
+            for line in file:
+                id, name = processLine(line)
+                map[id] = name
+            return map
+
+        map1 = mapFile(file1)
+        map2 = mapFile(file2)
+
+        # print sorted
+        for id, name in sorted(map1.items(), key = lambda x: x[0]):
+            print(name, map2[id], id)
+
+        file1.close()
+        file2.close()
+
+    # if files fit in half of the available ram
+    if combinedSize < (availableRam / 2):
+        matchSmallFiles()
+        return
+
+    # check disk space
+    availableDiskSpace = psutil.disk_usage('./').free
+    
+    if combinedSize > availableDiskSpace:
+        raise RuntimeError("There is not enough memory to perform matching files operation!")
+
+    # expect 50 characters in a row
+    ROW_SIZE_BYTES = 50
+    # use only half of available memory
+    CHUNK_ROWS_COUNT = availableRam / 2 / ROW_SIZE_BYTES # rows count per chunk
     # only one file chunk will be loaded in memory at the time
     # rows count is arbitrary and depends on available ram memory
 
@@ -46,11 +98,6 @@ def matchLargeFileData(fileName1, fileName2):
         def __updateInfo(self):
             line = linecache.getline(self.fileName, self.__currentRow)
             self.__idx, self.__name = processLine(line)
-
-    # get data from a line
-    def processLine(line):
-        line = line.split(' ')
-        return int(line[1]), line[0]
 
     # sort chunk and save it to file
     def processChunk(chunk, chunkName):
@@ -127,4 +174,4 @@ def matchLargeFileData(fileName1, fileName2):
     except StopIteration:
         pass
 
-matchLargeFileData('file1.txt', 'file2.txt')
+matchFileData('file1.txt', 'file2.txt')
